@@ -1,0 +1,73 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
+plugins {
+  id 'java-gradle-plugin'
+  id 'com.gradle.plugin-publish'
+  id 'com.vanniktech.maven.publish'
+  id 'org.jetbrains.kotlin.jvm'
+}
+
+group = 'com.fueledbycaffeine.fastsync'
+version = '0.1-SNAPSHOT'
+
+gradlePlugin {
+  vcsUrl = "https://github.com/joshfriend/fastsync"
+  website = "https://github.com/joshfriend/fastsync"
+  plugins {
+    fastsync {
+      id = "com.fueledbycaffeine.fastsync"
+      implementationClass = "com.fueledbycaffeine.fastsync.FastSyncSettingsPlugin"
+      displayName = "FastSync"
+      description = "A plugin that makes IDE sync faster"
+      tags = ["IDE", "dependencies"]
+    }
+  }
+}
+
+mavenPublishing {
+  publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, true)
+  signAllPublications()
+
+  pom {
+    name = "FastSync Gradle plugin"
+    description = "A Gradle plugin that and makes IDE sync faster"
+    inceptionYear = "2025"
+    url = "https://github.com/joshfriend/fastsync/"
+    licenses {
+      license {
+        name = "MIT License"
+        url = "https://choosealicense.com/licenses/mit/"
+        distribution = "https://choosealicense.com/licenses/mit/"
+      }
+    }
+    developers {
+      developer {
+        id = "joshfriend"
+        name = "Josh Friend"
+        url = "https://github.com/joshfriend/"
+      }
+    }
+    scm {
+      url = "https://github.com/joshfriend/fastsync/"
+      connection = "scm:git:git://github.com/joshfriend/fastsync.git"
+      developerConnection = "scm:git:ssh://git@github.com/joshfriend/fastsync.git"
+    }
+  }
+}
+
+dependencies {
+  compileOnly gradleApi()
+}
+
+test {
+  useJUnitPlatform()
+}
+
+kotlin {
+  jvmToolchain(17)
+  explicitApi()
+}
+
+tasks.withType(ValidatePlugins).configureEach {
+  enableStricterValidation = true
+}
