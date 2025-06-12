@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'com.fueledbycaffeine.fastsync'
-version = '0.2-SNAPSHOT'
+version = '0.3-SNAPSHOT'
 
 gradlePlugin {
   vcsUrl = "https://github.com/joshfriend/fastsync"
