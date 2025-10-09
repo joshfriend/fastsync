@@ -3,23 +3,25 @@
 package com.fueledbycaffeine.fastsync
 
 import com.fueledbycaffeine.fastsync.FastSyncSettingsPlugin.Companion.FASTSYNC_ENABLED_PROPERTY
-import org.gradle.api.Action
+import org.gradle.api.IsolatedAction
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.artifacts.Configuration
 import org.gradle.api.initialization.Settings
+import org.gradle.api.tasks.SourceSetContainer
 
 /**
  * A plugin that makes IDE sync faster.
  *
+ * ```
  * plugins {
- *   id 'com.fueledbycaffeine.fastsync'
+ *   id("com.fueledbycaffeine.fastsync")
  * }
+ * ```
  */
 public class FastSyncSettingsPlugin : Plugin<Settings> {
   override fun apply(target: Settings): Unit = target.run {
     if (isIdeSync && isFastSyncEnabled) {
-      gradle.beforeProject(MakeProjectIntransitiveAction())
+      gradle.lifecycle.beforeProject(MakeProjectIntransitiveAction())
     }
   }
 
@@ -28,15 +30,21 @@ public class FastSyncSettingsPlugin : Plugin<Settings> {
   }
 }
 
-private class MakeProjectIntransitiveAction : Action<Project> {
+private class MakeProjectIntransitiveAction : IsolatedAction<Project> {
   override fun execute(project: Project) {
-    project.configurations.configureEach { configuration ->
-      if (configuration.isCanBeResolved && configuration.isRuntimeClasspath) {
-        configuration.isTransitive = false
-        // Use compile classpath for version information to help resolve dependencies from BOMs
-        configuration.shouldResolveConsistentlyWith(
-          project.configurations.getAt(configuration.matchingCompileClasspathName)
-        )
+    // The base plugin applies JvmEcosystemPlugin, which adds the SourceSetContainer as a project extension.
+    project.pluginManager.withPlugin("base") {
+      val sourceSets = project.extensions.getByType(SourceSetContainer::class.java)
+      sourceSets.configureEach { sourceSet ->
+        val runtimeClasspathName = sourceSet.runtimeClasspathConfigurationName
+        val compileClasspathName = sourceSet.compileClasspathConfigurationName
+
+        project.configurations.named(runtimeClasspathName) { configuration ->
+          configuration.isTransitive = false
+
+          // Use compile classpath for version information to help resolve dependencies from BOMs
+          configuration.shouldResolveConsistentlyWith(project.configurations.named(compileClasspathName).get())
+        }
       }
     }
   }
@@ -47,14 +55,3 @@ private val Settings.isIdeSync: Boolean
 
 private val Settings.isFastSyncEnabled: Boolean
   get() = providers.gradleProperty(FASTSYNC_ENABLED_PROPERTY).getOrElse("true").toBoolean()
-
-private const val RUNTIME_CLASSPATH = "runtimeClasspath"
-
-private val Configuration.isRuntimeClasspath: Boolean
-  get() = name.contains(RUNTIME_CLASSPATH, true)
-
-private val Configuration.matchingCompileClasspathName: String
-  get() = when (name) {
-    RUNTIME_CLASSPATH -> "compileClasspath"
-    else -> "${name.removeSuffix(RUNTIME_CLASSPATH)}CompileClasspath"
-  }
