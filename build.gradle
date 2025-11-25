@@ -55,10 +55,6 @@ mavenPublishing {
   }
 }
 
-dependencies {
-  compileOnly gradleApi()
-}
-
 test {
   useJUnitPlatform()
 }
